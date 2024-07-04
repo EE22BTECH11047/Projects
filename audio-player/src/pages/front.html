@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='components/front.css') }}">
+  <title>Custom Audio Player</title>
+ </head>
+ <body>
+  <div class="audio-player">
+   <h2>Title of the Track</h2>
+   <h3>Midnight Memories</h3>
+   <input type="text" id="search-input" placeholder="Search...">
+   <button id="search-button">Search</button>
+   <audio controls>
+    <source src="" type="audio/mpeg">
+   </audio>
+   <p id="current-song-name"></p>
+  </div>
+  <div class="audio-buttons-container">
+  <button id="shuffle-audio-button" class="audio-buttons">Shuffle Audio</button>
+  <button id="queue-audio-button" class="audio-buttons">Queue Audio</button>
+</div>
+  <div class="audio-list-container">
+   <div class="audio-list">
+    <h3>List of Audio Files</h3>
+    <ul>
+     {% for audio_file in audio_files %}
+     <li><a href="javascript:void(0);" class="audio-file-link" data-filename="{{ audio_file }}">{{ audio_file }}</a></li>
+     {% endfor %}
+    </ul>
+   </div>
+  </div>
+  <script>
+    const searchButton = document.getElementById('search-button');
+    const searchInput = document.getElementById('search-input');
+    const audioLinks = document.querySelectorAll('.audio-file-link');
+    const audioElement = document.querySelector('audio');
+    const currentSongName = document.getElementById('current-song-name');
+    let currentIndex = 0;
+    let shuffledIndices = [];
+    let isQueueMode = false;
+    let shuffleCurrentIndex = 0;
+    let queueCurrentIndex = 0;
+
+    searchButton.addEventListener('click', function() {
+      const searchQuery = searchInput.value.toLowerCase();
+
+      audioLinks.forEach((link, index) => {
+        const filename = link.getAttribute('data-filename').toLowerCase();
+        if (filename.includes(searchQuery)) {
+          const audioPath = "{{ url_for('serve_audio', filename='') }}" + link.getAttribute('data-filename');
+          audioElement.src = audioPath;
+          audioElement.load();
+          audioElement.play();
+          currentSongName.textContent = link.getAttribute('data-filename');
+        }
+      });
+    });
+
+    audioLinks.forEach((link, index) => {
+      link.addEventListener('click', function() {
+        if (isQueueMode) {
+          queueCurrentIndex = index + 1;
+        }
+        const filename = this.getAttribute('data-filename');
+        const audioPath = "{{ url_for('serve_audio', filename='') }}" + filename;
+        audioElement.src = audioPath;
+        audioElement.load();
+        audioElement.play();
+        currentSongName.textContent = filename;
+      });
+    });
+
+    function playNextShuffledAudio() {
+      if (shuffleCurrentIndex < shuffledIndices.length) {
+        const index = shuffledIndices[shuffleCurrentIndex];
+        const audioLink = audioLinks[index];
+        const filename = audioLink.getAttribute('data-filename');
+        const audioPath = "{{ url_for('serve_audio', filename='') }}" + filename;
+        audioElement.src = audioPath;
+        audioElement.load();
+        audioElement.play();
+        shuffleCurrentIndex++;
+        currentSongName.textContent = filename;
+      }
+    }
+
+    function playNextQueuedAudio() {
+      if (queueCurrentIndex < audioLinks.length) {
+        const filename = audioLinks[queueCurrentIndex].getAttribute('data-filename');
+        const audioPath = "{{ url_for('serve_audio', filename='') }}" + filename;
+        audioElement.src = audioPath;
+        audioElement.load();
+        audioElement.play();
+        queueCurrentIndex++;
+        currentSongName.textContent = filename;
+      }
+    }
+
+    const shuffleAudioButton = document.getElementById('shuffle-audio-button');
+    shuffleAudioButton.addEventListener('click', function() {
+      shuffleCurrentIndex = 0;
+      isQueueMode = false;
+
+      fetch('/get-shuffled-indices')
+        .then(response => response.json())
+        .then(data => {
+          shuffledIndices = data;
+          playNextShuffledAudio();
+        });
+    });
+
+    const queueAudioButton = document.getElementById('queue-audio-button');
+    queueAudioButton.addEventListener('click', function() {
+      isQueueMode = true;
+      queueCurrentIndex = 0;
+      playNextQueuedAudio();
+    });
+
+    audioElement.addEventListener('ended', function() {
+      if (isQueueMode) {
+        playNextQueuedAudio();
+      } else {
+        playNextShuffledAudio();
+      }
+    });
+  </script>
+ </body>
+</html>
