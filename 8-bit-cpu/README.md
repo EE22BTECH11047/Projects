@@ -1,7 +1,7 @@
 # 8-bit-cpu-in-verilog
 
 A simple 8-bit microprocessor
-For the purposes of this assignment, a microprocessor consists of the following parts:
+A microprocessor consists of the following parts:
 
 ###### Instruction memory (read only)
 ###### Data memory (read / write)
